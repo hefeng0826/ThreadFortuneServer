@@ -56,41 +56,86 @@
 #include <QDataStream>
 //class QTcpSocket;
 
-class FortuneSocket : public QTcpSocket
+class FortuneTcpSocket : public QTcpSocket
 {
+    enum Command{SET_RANGE = 25,
+                RANDOM_CAPTURE = 61,
+                CONTINUE_CAPTURE_1 = 59,
+                CONTINUE_CAPTURE_2 = 60,
+                STOP_CAPTURE = 56,
+                SAY_BYE = 57};
+
+    enum RangeCode{_2pot5VN = 0,  //+- 2.5v
+                   _5VN,  //+-5v
+                   _6pot25VN, //+-6.25v
+                   _10VN, //+-10v
+                   _12pot5VN, //+-12.5v
+                   _5v,      //0 - 5 v
+                   _10v,     //0 - 10v
+                   _12pot5v  //0 - 12.5v
+    };
     Q_OBJECT
 public:
-    FortuneSocket(QObject* parent = nullptr);
-    ~FortuneSocket();
-
-signals:
+    FortuneTcpSocket(QObject* parent = nullptr);
     void quit();
+    void setRange(RangeCode code, quint8 firstChannel, quint8 channels);
+    void testCapture(quint8 channels);
+    void continueCapture_1(quint8 channels, quint16 freq,
+                           quint16 blockSize, quint8 quitCode = 1);
+    void continueCapture_2(quint8 channels, quint16 freq,
+                           quint16 blockSize = 0, quint8 blockMultiple = 1,
+                           quint8 quitCode = 1);
+    void stop();
 
+    void setClockFlag(int flag){_clockFlag = flag;}
+    int channels()const{return 8;}
+protected slots:
+    void sendCommand();
+signals:
+    void command();
+private:
+    QByteArray _outputBuffer;
+
+    quint8 _quitCode;
+    quint8 _firstChannel; //首通道
+    quint8 _channels;     //通道数
+    quint16 _frequence;  //频率设定
+    quint16 _blockSize;
+    quint8 _freqCode;  //频率调整标志
+    quint8 _clockFlag;  //时钟标志
+    quint8 _command;   //命令
+    quint8 _gainCode; //增益码
+
+    static const int _OUTPUTBUFFERSIZE = 20;
 };
+
 //! [0]
 class FortuneThread : public QThread
 {
     Q_OBJECT
 
 public:
-    FortuneThread(int _socketDescriptor, QObject *parent);
+    FortuneThread(int _socketDescriptor, QObject *parent = nullptr);
     virtual ~FortuneThread();
     void closeClient();
+    void send();
 protected:
     void run() override;
 
 signals:
     void error(QTcpSocket::SocketError socketError);
-    void disconnectClient();
+    void clientStateChanged(QString, quint16, QString);
 protected slots:
     void readyRead();
 public slots:
-    void disconnected();
+    void on_socketDisconnected();
 private:
     int _socketDescriptor;
-    QTcpSocket *_tcpSocket = nullptr;
+    FortuneTcpSocket *_tcpSocket = nullptr;
     QDataStream _ds;
     quint8 _output[20] = {0};
+    QString _peerAddr;
+    quint16 _peerPort;
 };
 //! [0]
 

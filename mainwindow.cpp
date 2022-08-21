@@ -4,6 +4,7 @@
 #include <QToolBar>
 #include <QLabel>
 #include <QNetworkInterface>
+#include <QTcpSocket>
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -40,18 +41,26 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->spinBoxPort->setValue(3333);
     ui->spinBoxPort->setPrefix(QString::fromLocal8Bit("端口:"));
 
-    connect(_server, &FortuneServer::newConnection,
-            this, &MainWindow::on_newClientConnected);
+    connect(_server, &FortuneServer::clientStateChanged,
+            this, &MainWindow::on_clientStateChanged);
+
+//    connect(_server, &FortuneServer::newConnection,
+//            this, &MainWindow::on_clientStateChanged);
 }
 
 MainWindow::~MainWindow()
 {
+    _server->closeServer();  //强关闭服务
     delete ui;
 }
 
-void MainWindow::on_newClientConnected()
+void MainWindow::on_clientStateChanged(QString peerAddr, quint16 peerPort,
+                                       QString state)
 {
-
+    //delete ui 会报错
+    QString strInfo = QString("%1:%2-%3(%4)").arg(peerAddr)
+            .arg(peerPort).arg(state);
+    ui->statusbar->showMessage(strInfo);
 }
 
 void MainWindow::on_actConnect_toggled(bool arg1)
@@ -73,4 +82,14 @@ void MainWindow::on_actConnect_toggled(bool arg1)
     {
         ui->comboBoxHostIP->setEnabled(true);
     }
+}
+
+void MainWindow::on_actionsend_triggered()
+{
+
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+    _server->send();
 }

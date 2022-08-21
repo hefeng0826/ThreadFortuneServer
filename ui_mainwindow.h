@@ -15,6 +15,7 @@
 #include <QtWidgets/QComboBox>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QToolBar>
@@ -29,6 +30,7 @@ public:
     QWidget *centralwidget;
     QSpinBox *spinBoxPort;
     QComboBox *comboBoxHostIP;
+    QPushButton *pushButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
     QToolBar *toolBar;
@@ -53,10 +55,13 @@ public:
         comboBoxHostIP->setObjectName(QStringLiteral("comboBoxHostIP"));
         comboBoxHostIP->setGeometry(QRect(100, 180, 69, 22));
         comboBoxHostIP->setEditable(false);
+        pushButton = new QPushButton(centralwidget);
+        pushButton->setObjectName(QStringLiteral("pushButton"));
+        pushButton->setGeometry(QRect(170, 40, 80, 20));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
-        menubar->setGeometry(QRect(0, 0, 834, 23));
+        menubar->setGeometry(QRect(0, 0, 834, 21));
         MainWindow->setMenuBar(menubar);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -71,6 +76,7 @@ public:
         MainWindow->addToolBar(Qt::TopToolBarArea, toolBar);
 
         toolBar->addAction(actConnect);
+        toolBar->addSeparator();
 
         retranslateUi(MainWindow);
 
@@ -81,6 +87,7 @@ public:
     {
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", nullptr));
         actConnect->setText(QApplication::translate("MainWindow", "\350\277\236\346\216\245", nullptr));
+        pushButton->setText(QApplication::translate("MainWindow", "Hello", nullptr));
         toolBar->setWindowTitle(QApplication::translate("MainWindow", "toolBar", nullptr));
     } // retranslateUi
 

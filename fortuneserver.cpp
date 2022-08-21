@@ -71,6 +71,7 @@ FortuneServer::FortuneServer(QObject *parent)
 
 FortuneServer::~FortuneServer()
 {
+    closeServer();
     qDebug()<<"Server Destroy";
 }
 
@@ -89,11 +90,23 @@ void FortuneServer::startServer()
 void FortuneServer::closeServer()
 {
     close();
-    QSetIterator<FortuneThread*> it(_threadSet);
+    QMapIterator<qintptr, FortuneThread*> it(_descriptorMap);
     while (it.hasNext()) {
-        it.next()->closeClient();
+        it.next();
+        if(it.value() != nullptr)
+            it.value()->on_socketDisconnected();
     }
-    _threadSet.clear();
+    _descriptorMap.clear();
+}
+
+void FortuneServer::send()
+{
+    _descriptorMap.first()->send();
+}
+
+const QList<qintptr>& FortuneServer::updateClientId()
+{
+    return _descriptorMap.keys();
 }
 //! [0]
 
@@ -102,13 +115,19 @@ void FortuneServer::incomingConnection(qintptr socketDescriptor)
 {
     qDebug()<<socketDescriptor;
 
-    FortuneThread *thread = new FortuneThread(socketDescriptor, this);
-    _threadSet.insert(thread);
+    //不使用this作为parent object：关闭服务前需要先关闭客户端的socket连接
+    FortuneThread *thread = new FortuneThread(socketDescriptor, nullptr);
+    _descriptorMap.insert(socketDescriptor, thread);
 
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
-//    connect(thread, &FortuneThread::finished, [=]{_threadSet.remove(thread);});
-    connect(thread, &FortuneThread::started,
-            this, &FortuneServer::threadStarted);
+    connect(thread, &FortuneThread::finished,
+            [=]{qDebug()<<"remove"<<socketDescriptor;
+        _descriptorMap.remove(socketDescriptor);
+        qDebug()<<_descriptorMap.count()<<_descriptorMap[socketDescriptor];
+    });
+    connect(thread, &FortuneThread::clientStateChanged,
+            this, &FortuneServer::clientStateChanged);
+
     thread->start();
 }
 //! [1]

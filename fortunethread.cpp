@@ -62,21 +62,28 @@ FortuneThread::FortuneThread(int socketDescriptor, QObject *parent)
 
 FortuneThread::~FortuneThread()
 {
-    closeClient();
-    wait();
+    on_socketDisconnected();
+//    closeClient();
     qDebug()<<"Thread Destroyed";
 }
 
 void FortuneThread::closeClient()
 {
-    disconnected();
-    return;
-    if(isRunning())
-    {
-        emit disconnectClient();
-//            _output[0] = 57;
-//            _tcpSocket->write((const char*)_output, 20);
-    }
+    qDebug()<<"Socket ThreadId:"<<QThread::currentThreadId();
+//    disconnected();
+//    return;
+//    if(isRunning())
+//    {
+//        emit disconnectClient();
+////            _output[0] = 57;
+////            _tcpSocket->write((const char*)_output, 20);
+//    }
+}
+
+void FortuneThread::send()
+{
+    qDebug()<<"Main ThreadId:"<<QThread::currentThreadId();
+//    QMetaObject::invokeMethod(_tcpSocket, SLOT(send()));
 }
 //! [0]
 
@@ -84,12 +91,17 @@ void FortuneThread::closeClient()
 void FortuneThread::run()
 {
     qDebug()<<"Starting thread";
-    _tcpSocket = new QTcpSocket;
+    _tcpSocket = new FortuneTcpSocket;   //不可以使用this作为父对象
+
     if(!_tcpSocket->setSocketDescriptor(_socketDescriptor))
     {
         emit error(_tcpSocket->error());
         return;
     }
+    _peerAddr = _tcpSocket->peerAddress().toString();
+    _peerPort = _tcpSocket->peerPort();
+
+    emit clientStateChanged(_peerAddr, _peerPort, "Connected");
 //    _ds.setDevice(_tcpSocket);
 //    _ds.setVersion(QDataStream::Qt_5_10);
 //    _output[0] = 25;
@@ -102,16 +114,17 @@ void FortuneThread::run()
 //    _ds.writeRawData((const char*)_output, 20);
 //    _output[0] = 57;
 //    _tcpSocket->write((const char*)_output, 20);
+
+//    connect(_tcpSocket, &FortuneTcpSocket::stateChanged,
+//            [=](QAbstractSocket::SocketState state){qDebug()<<state;});
     connect(_tcpSocket, &QTcpSocket::readyRead,
             this, &FortuneThread::readyRead);
 
     connect(_tcpSocket, &QTcpSocket::disconnected,
-            this, &FortuneThread::disconnected);
+            this, &FortuneThread::on_socketDisconnected);
 
-//    connect(this, &FortuneThread::disconnectClient,
-//            [=]{    _output[0] = 57;
-//        _tcpSocket->write((const char*)_output, 20);});
-
+//    connect(_tcpSocket, &FortuneTcpSocket::disconnected,
+//            [=]{emit clientStateChanged(_peerAddr, _peerPort, "Disconnected");});
     qDebug()<<_socketDescriptor<<"Client Connected";
     qDebug()<<_tcpSocket->localAddress().toString();
     qDebug()<<_tcpSocket->peerAddress().toString()<<_tcpSocket->peerPort()<<_tcpSocket->peerName();
@@ -121,6 +134,8 @@ void FortuneThread::run()
 
 void FortuneThread::readyRead()
 {
+    qDebug()<<_tcpSocket->readAll();
+    return;
     _ds.startTransaction();
     qint16 buffer[64][8] = {0};
 
@@ -151,16 +166,83 @@ void FortuneThread::readyRead()
     }
 }
 
-void FortuneThread::disconnected()
+void FortuneThread::on_socketDisconnected()
 {
     if(!isRunning()) return;
-
+    _tcpSocket->quit();   //采集卡关闭指令
+    _tcpSocket->deleteLater();
     qDebug()<<_socketDescriptor<<"Disconnected";
     exit(0);
     wait();
-
-    _output[0] = 57;
-     _tcpSocket->write((const char*)_output, 20);
-    _tcpSocket->deleteLater();
+    emit clientStateChanged(_peerAddr, _peerPort, "Disconnected");
 }
 //! [4]
+
+FortuneTcpSocket::FortuneTcpSocket(QObject *parent)
+    :QTcpSocket(parent)
+{
+    _outputBuffer.resize(_OUTPUTBUFFERSIZE);
+    connect(this, SIGNAL(command()),
+            this, SLOT(sendCommand()));
+}
+
+void FortuneTcpSocket::quit()
+{
+    _outputBuffer.insert(0, char(SAY_BYE));
+    emit command();
+}
+
+void FortuneTcpSocket::setRange(RangeCode code, quint8 firstChannel, quint8 channels)
+{
+    if(firstChannel > 8) return;
+    if(channels > 8) return;
+    _outputBuffer.insert(0, char(SET_RANGE));
+    _outputBuffer.insert(2 + firstChannel, channels, char(code));
+    emit command();
+}
+
+void FortuneTcpSocket::continueCapture_1(quint8 channels, quint16 freq,
+                                    quint16 blockSize, quint8 quitCode)
+{
+    _outputBuffer.clear();
+    QDataStream ds(&_outputBuffer, QIODevice::WriteOnly);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    ds<<(quint8)CONTINUE_CAPTURE_1<<quint8(0)<<quint8(0)
+     <<(quint8)channels<<quitCode<<freq<<blockSize<<quint8(freq > 500 ? 2 : 1)
+    <<quint8(0)<<quint8(0)<<_clockFlag;
+    _outputBuffer.append(6, char(0));
+    emit command();
+}
+
+void FortuneTcpSocket::continueCapture_2(quint8 channels, quint16 freq,
+                                    quint16 blockSize, quint8 blockMultiple,
+                                    quint8 quitCode)
+{
+    _outputBuffer.clear();
+    QDataStream ds(&_outputBuffer, QIODevice::WriteOnly);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    ds<<(quint8)CONTINUE_CAPTURE_1<<quint8(0)<<quint8(0)
+     <<(quint8)channels<<quitCode<<freq<<blockSize<<blockMultiple
+    <<quint8(0)<<quint8(0)<<_clockFlag;
+    _outputBuffer.append(6, char(0));
+    emit command();
+}
+
+void FortuneTcpSocket::testCapture(quint8 channels)
+{
+    _outputBuffer.insert(0, char(RANDOM_CAPTURE));
+    _outputBuffer.insert(2, char(0));
+    _outputBuffer.insert(3, char(channels));
+    emit command();
+}
+
+void FortuneTcpSocket::stop()
+{
+    _outputBuffer.insert(0, char(STOP_CAPTURE));
+    emit command();
+}
+
+void FortuneTcpSocket::sendCommand()
+{
+    write(_outputBuffer);
+}

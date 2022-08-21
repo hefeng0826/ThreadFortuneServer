@@ -53,7 +53,8 @@
 
 #include <QStringList>
 #include <QTcpServer>
-#include <QSet>
+#include <QMap>
+#include <QHostAddress>
 
 class QThread;
 class FortuneThread;
@@ -69,13 +70,16 @@ public:
     void startServer();
     void closeServer();
 
+    void send();
+
+    const QList<qintptr>& updateClientId();
 signals:
-    void threadStarted();
+    void clientStateChanged(QString, quint16, QString);
 protected:
     void incomingConnection(qintptr socketDescriptor) override;
 private:
     QStringList fortunes;
-    QSet<FortuneThread*> _threadSet;
+    QMap<qintptr, FortuneThread*> _descriptorMap;
 };
 //! [0]
 
