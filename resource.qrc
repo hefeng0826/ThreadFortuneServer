@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/ico">
+        <file>images/network.png</file>
+    </qresource>
+</RCC>
