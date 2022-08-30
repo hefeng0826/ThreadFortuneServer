@@ -77,6 +77,8 @@ class FortuneTcpSocket : public QTcpSocket
     Q_OBJECT
 public:
     FortuneTcpSocket(QObject* parent = nullptr);
+    virtual ~FortuneTcpSocket();
+
     void quit();
     void setRange(RangeCode code, quint8 firstChannel, quint8 channels);
     void testCapture(quint8 channels);
@@ -117,14 +119,12 @@ class FortuneThread : public QThread
 public:
     FortuneThread(int _socketDescriptor, QObject *parent = nullptr);
     virtual ~FortuneThread();
-    void closeClient();
-    void send();
 protected:
     void run() override;
 
 signals:
     void error(QTcpSocket::SocketError socketError);
-    void clientStateChanged(QString, quint16, QString);
+    void clientStateChanged(QString, quint16, bool, qintptr);
 protected slots:
     void readyRead();
 public slots:

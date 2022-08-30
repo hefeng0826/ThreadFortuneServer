@@ -19,16 +19,13 @@ public:
     ~MainWindow();
 
 protected slots:
-    void on_clientStateChanged(QString, quint16, QString);
+    void on_clientStateChanged(QString, quint16, bool, qintptr);
 private slots:
     void on_actConnect_toggled(bool arg1);
-
-    void on_actionsend_triggered();
-
-    void on_pushButton_clicked();
 private:
     Ui::MainWindow *ui;
     FortuneServer *_server;
+    QSet<qintptr> _descriptors;
 };
 
 #endif // MAINWINDOW_H

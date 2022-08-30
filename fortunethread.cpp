@@ -67,24 +67,6 @@ FortuneThread::~FortuneThread()
     qDebug()<<"Thread Destroyed";
 }
 
-void FortuneThread::closeClient()
-{
-    qDebug()<<"Socket ThreadId:"<<QThread::currentThreadId();
-//    disconnected();
-//    return;
-//    if(isRunning())
-//    {
-//        emit disconnectClient();
-////            _output[0] = 57;
-////            _tcpSocket->write((const char*)_output, 20);
-//    }
-}
-
-void FortuneThread::send()
-{
-    qDebug()<<"Main ThreadId:"<<QThread::currentThreadId();
-//    QMetaObject::invokeMethod(_tcpSocket, SLOT(send()));
-}
 //! [0]
 
 //! [1]
@@ -101,7 +83,7 @@ void FortuneThread::run()
     _peerAddr = _tcpSocket->peerAddress().toString();
     _peerPort = _tcpSocket->peerPort();
 
-    emit clientStateChanged(_peerAddr, _peerPort, "Connected");
+    emit clientStateChanged(_peerAddr, _peerPort, true, _socketDescriptor);
 //    _ds.setDevice(_tcpSocket);
 //    _ds.setVersion(QDataStream::Qt_5_10);
 //    _output[0] = 25;
@@ -122,7 +104,8 @@ void FortuneThread::run()
 
     connect(_tcpSocket, &QTcpSocket::disconnected,
             this, &FortuneThread::on_socketDisconnected);
-
+    connect(this, &FortuneThread::finished,
+            _tcpSocket, &FortuneTcpSocket::deleteLater);
 //    connect(_tcpSocket, &FortuneTcpSocket::disconnected,
 //            [=]{emit clientStateChanged(_peerAddr, _peerPort, "Disconnected");});
     qDebug()<<_socketDescriptor<<"Client Connected";
@@ -170,11 +153,11 @@ void FortuneThread::on_socketDisconnected()
 {
     if(!isRunning()) return;
     _tcpSocket->quit();   //采集卡关闭指令
-    _tcpSocket->deleteLater();
+//    _tcpSocket->deleteLater();
     qDebug()<<_socketDescriptor<<"Disconnected";
     exit(0);
     wait();
-    emit clientStateChanged(_peerAddr, _peerPort, "Disconnected");
+    emit clientStateChanged(_peerAddr, _peerPort, false, _socketDescriptor);
 }
 //! [4]
 
@@ -186,10 +169,17 @@ FortuneTcpSocket::FortuneTcpSocket(QObject *parent)
             this, SLOT(sendCommand()));
 }
 
+FortuneTcpSocket::~FortuneTcpSocket()
+{
+    qDebug()<<"Fortune TcpSocket Destroyed";
+}
+
 void FortuneTcpSocket::quit()
 {
+    qDebug()<<"Main Thread:"<<QThread::currentThreadId();
     _outputBuffer.insert(0, char(SAY_BYE));
     emit command();
+    QThread::sleep(1);
 }
 
 void FortuneTcpSocket::setRange(RangeCode code, quint8 firstChannel, quint8 channels)
@@ -244,5 +234,6 @@ void FortuneTcpSocket::stop()
 
 void FortuneTcpSocket::sendCommand()
 {
+    qDebug()<<"Socket Thread"<<QThread::currentThreadId();
     write(_outputBuffer);
 }

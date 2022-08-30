@@ -53,7 +53,7 @@
 
 #include <QStringList>
 #include <QTcpServer>
-#include <QMap>
+#include <QHash>
 #include <QHostAddress>
 
 class QThread;
@@ -61,6 +61,22 @@ class FortuneThread;
 //! [0]
 class FortuneServer : public QTcpServer
 {
+    enum Command{SET_RANGE = 25,
+                RANDOM_CAPTURE = 61,
+                CONTINUE_CAPTURE_1 = 59,
+                CONTINUE_CAPTURE_2 = 60,
+                STOP_CAPTURE = 56,
+                SAY_BYE = 57};
+
+    enum RangeCode{_2pot5VN = 0,  //+- 2.5v
+                   _5VN,  //+-5v
+                   _6pot25VN, //+-6.25v
+                   _10VN, //+-10v
+                   _12pot5VN, //+-12.5v
+                   _5v,      //0 - 5 v
+                   _10v,     //0 - 10v
+                   _12pot5v  //0 - 12.5v
+    };
     Q_OBJECT
 
 public:
@@ -72,14 +88,14 @@ public:
 
     void send();
 
-    const QList<qintptr>& updateClientId();
+    QList<qintptr> updateClientId();
 signals:
-    void clientStateChanged(QString, quint16, QString);
+    void clientStateChanged(QString, quint16, bool, qintptr);
 protected:
     void incomingConnection(qintptr socketDescriptor) override;
 private:
     QStringList fortunes;
-    QMap<qintptr, FortuneThread*> _descriptorMap;
+    QHash<qintptr, FortuneThread*> _descriptorMap;
 };
 //! [0]
 

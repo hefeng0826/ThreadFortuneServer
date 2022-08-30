@@ -55,11 +55,17 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::on_clientStateChanged(QString peerAddr, quint16 peerPort,
-                                       QString state)
+                                       bool state, qintptr descriptr)
 {
     //delete ui »á±¨´í
+    if(state)
+    {
+        _descriptors.insert(descriptr);
+    }
+    else
+        _descriptors.remove(descriptr);
     QString strInfo = QString("%1:%2-%3(%4)").arg(peerAddr)
-            .arg(peerPort).arg(state);
+            .arg(peerPort).arg(state ? "Connected" : "Disconnected").arg(descriptr);
     ui->statusbar->showMessage(strInfo);
 }
 
@@ -82,14 +88,4 @@ void MainWindow::on_actConnect_toggled(bool arg1)
     {
         ui->comboBoxHostIP->setEnabled(true);
     }
-}
-
-void MainWindow::on_actionsend_triggered()
-{
-
-}
-
-void MainWindow::on_pushButton_clicked()
-{
-    _server->send();
 }

@@ -90,7 +90,7 @@ void FortuneServer::startServer()
 void FortuneServer::closeServer()
 {
     close();
-    QMapIterator<qintptr, FortuneThread*> it(_descriptorMap);
+    QHashIterator<qintptr, FortuneThread*> it(_descriptorMap);
     while (it.hasNext()) {
         it.next();
         if(it.value() != nullptr)
@@ -99,12 +99,7 @@ void FortuneServer::closeServer()
     _descriptorMap.clear();
 }
 
-void FortuneServer::send()
-{
-    _descriptorMap.first()->send();
-}
-
-const QList<qintptr>& FortuneServer::updateClientId()
+QList<qintptr> FortuneServer::updateClientId()
 {
     return _descriptorMap.keys();
 }
