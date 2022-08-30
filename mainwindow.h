@@ -19,9 +19,11 @@ public:
     ~MainWindow();
 
 protected slots:
-    void on_clientStateChanged(QString, quint16, bool, qintptr);
+    void on_clientStateChanged(QString, quint16, bool, qint32);
 private slots:
     void on_actConnect_toggled(bool arg1);
+    void on_comboBoxRange_currentIndexChanged(const QString &arg1);
+
 private:
     Ui::MainWindow *ui;
     FortuneServer *_server;

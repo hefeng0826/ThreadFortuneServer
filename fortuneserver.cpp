@@ -60,6 +60,8 @@
 FortuneServer::FortuneServer(QObject *parent)
     : QTcpServer(parent)
 {
+    qRegisterMetaType<qintptr>();
+
     fortunes << tr("You've been leading a dog's life. Stay off the furniture.")
              << tr("You've got to think about tomorrow.")
              << tr("You will be surprised by a loud noise.")
@@ -102,6 +104,48 @@ void FortuneServer::closeServer()
 QList<qintptr> FortuneServer::updateClientId()
 {
     return _descriptorMap.keys();
+}
+
+void FortuneServer::quit(qintptr descriptor)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->quit();
+}
+
+void FortuneServer::setRange(qintptr descriptor, FortuneTcpSocket::RangeCode code, quint8 firstChannel, quint8 channels)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->setRange(code, firstChannel, channels);
+}
+
+void FortuneServer::testCapture(qintptr descriptor, quint8 channels)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->testCapture(channels);
+}
+
+void FortuneServer::continueCapture_1(qintptr descriptor, quint8 channels, quint16 freq, quint16 blockSize, quint8 quitCode)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->continueCapture_1(channels, freq, blockSize, quitCode);
+}
+
+void FortuneServer::continueCapture_2(qintptr descriptor, quint8 channels, quint16 freq, quint16 blockSize, quint8 blockMultiple, quint8 quitCode)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->continueCapture_2(channels, freq, blockSize, blockMultiple, quitCode);
+}
+
+void FortuneServer::stop(qintptr descriptor)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->stop();
+}
+
+void FortuneServer::setClockFlag(qintptr descriptor, int flag)
+{
+    if(_descriptorMap.contains(descriptor))
+        _descriptorMap[descriptor]->setClockFlag(flag);
 }
 //! [0]
 

@@ -1,11 +1,14 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "fortuneserver.h"
+#include "fortunethread.h"
+
 #include <QToolBar>
 #include <QLabel>
 #include <QNetworkInterface>
 #include <QTcpSocket>
 #include <QDebug>
+#include <QMetaEnum>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -41,6 +44,18 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->spinBoxPort->setValue(3333);
     ui->spinBoxPort->setPrefix(QString::fromLocal8Bit("端口:"));
 
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(ui->comboBoxClient);
+    ui->toolBar->addSeparator();
+    ui->toolBar->addWidget(ui->comboBoxRange);
+    QMetaEnum metaEnum = QMetaEnum::fromType<FortuneTcpSocket::RangeCode>();
+    QStringList strList;
+    for(int i = 0; i < metaEnum.keyCount(); i++)
+    {
+        strList<<metaEnum.key(i);
+    }
+    ui->comboBoxRange->addItems(strList);
+
     connect(_server, &FortuneServer::clientStateChanged,
             this, &MainWindow::on_clientStateChanged);
 
@@ -55,18 +70,31 @@ MainWindow::~MainWindow()
 }
 
 void MainWindow::on_clientStateChanged(QString peerAddr, quint16 peerPort,
-                                       bool state, qintptr descriptr)
+                                       bool state, qint32 descriptr)
 {
-    //delete ui 会报错
-    if(state)
-    {
-        _descriptors.insert(descriptr);
-    }
-    else
-        _descriptors.remove(descriptr);
     QString strInfo = QString("%1:%2-%3(%4)").arg(peerAddr)
             .arg(peerPort).arg(state ? "Connected" : "Disconnected").arg(descriptr);
     ui->statusbar->showMessage(strInfo);
+    //delete ui 会报错
+    if(state)
+    {
+        ui->comboBoxClient->addItem(peerAddr, descriptr);
+        _descriptors.insert(descriptr);
+    }
+    else
+    {
+        _descriptors.remove(descriptr);
+
+        int index = -1;
+        for(int i = 0; i < ui->comboBoxClient->count(); i++)
+        {
+            if(ui->comboBoxClient->itemData(i).toUInt() == descriptr)
+            {
+                ui->comboBoxClient->removeItem(i);
+                break;
+            }
+        }
+    }
 }
 
 void MainWindow::on_actConnect_toggled(bool arg1)
@@ -88,4 +116,13 @@ void MainWindow::on_actConnect_toggled(bool arg1)
     {
         ui->comboBoxHostIP->setEnabled(true);
     }
+}
+
+void MainWindow::on_comboBoxRange_currentIndexChanged(const QString &arg1)
+{
+    QMetaEnum metaEnum = QMetaEnum::fromType<FortuneTcpSocket::RangeCode>();
+
+    int value = metaEnum.keysToValue(arg1.toLocal8Bit());
+
+    qDebug()<<arg1<<value<<ui->comboBoxClient->currentData().toUInt();
 }

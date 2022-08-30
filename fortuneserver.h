@@ -55,28 +55,12 @@
 #include <QTcpServer>
 #include <QHash>
 #include <QHostAddress>
-
+#include "fortunethread.h"
 class QThread;
 class FortuneThread;
 //! [0]
 class FortuneServer : public QTcpServer
 {
-    enum Command{SET_RANGE = 25,
-                RANDOM_CAPTURE = 61,
-                CONTINUE_CAPTURE_1 = 59,
-                CONTINUE_CAPTURE_2 = 60,
-                STOP_CAPTURE = 56,
-                SAY_BYE = 57};
-
-    enum RangeCode{_2pot5VN = 0,  //+- 2.5v
-                   _5VN,  //+-5v
-                   _6pot25VN, //+-6.25v
-                   _10VN, //+-10v
-                   _12pot5VN, //+-12.5v
-                   _5v,      //0 - 5 v
-                   _10v,     //0 - 10v
-                   _12pot5v  //0 - 12.5v
-    };
     Q_OBJECT
 
 public:
@@ -89,8 +73,20 @@ public:
     void send();
 
     QList<qintptr> updateClientId();
+
+    void quit(qintptr);
+    void setRange(qintptr,FortuneTcpSocket::RangeCode code, quint8 firstChannel, quint8 channels);
+    void testCapture(qintptr, quint8 channels);
+    void continueCapture_1(qintptr, quint8 channels, quint16 freq,
+                           quint16 blockSize, quint8 quitCode = 1);
+    void continueCapture_2(qintptr, quint8 channels, quint16 freq,
+                           quint16 blockSize = 0, quint8 blockMultiple = 1,
+                           quint8 quitCode = 1);
+    void stop(qintptr);
+
+    void setClockFlag(qintptr, int flag);
 signals:
-    void clientStateChanged(QString, quint16, bool, qintptr);
+    void clientStateChanged(QString, quint16, bool, qint32);
 protected:
     void incomingConnection(qintptr socketDescriptor) override;
 private:

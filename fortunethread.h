@@ -58,6 +58,7 @@
 
 class FortuneTcpSocket : public QTcpSocket
 {
+public:
     enum Command{SET_RANGE = 25,
                 RANDOM_CAPTURE = 61,
                 CONTINUE_CAPTURE_1 = 59,
@@ -75,6 +76,9 @@ class FortuneTcpSocket : public QTcpSocket
                    _12pot5v  //0 - 12.5v
     };
     Q_OBJECT
+    Q_ENUM(Command)
+    Q_ENUM(RangeCode)
+
 public:
     FortuneTcpSocket(QObject* parent = nullptr);
     virtual ~FortuneTcpSocket();
@@ -119,12 +123,24 @@ class FortuneThread : public QThread
 public:
     FortuneThread(int _socketDescriptor, QObject *parent = nullptr);
     virtual ~FortuneThread();
+
+    void quit();
+    void setRange(FortuneTcpSocket::RangeCode code, quint8 firstChannel, quint8 channels);
+    void testCapture(quint8 channels);
+    void continueCapture_1(quint8 channels, quint16 freq,
+                           quint16 blockSize, quint8 quitCode = 1);
+    void continueCapture_2(quint8 channels, quint16 freq,
+                           quint16 blockSize = 0, quint8 blockMultiple = 1,
+                           quint8 quitCode = 1);
+    void stop();
+
+    void setClockFlag(int flag);
 protected:
     void run() override;
 
 signals:
     void error(QTcpSocket::SocketError socketError);
-    void clientStateChanged(QString, quint16, bool, qintptr);
+    void clientStateChanged(QString, quint16, bool, qint32);
 protected slots:
     void readyRead();
 public slots:

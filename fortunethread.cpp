@@ -67,6 +67,47 @@ FortuneThread::~FortuneThread()
     qDebug()<<"Thread Destroyed";
 }
 
+void FortuneThread::quit()
+{
+    if(isRunning())
+        _tcpSocket->quit();
+}
+
+void FortuneThread::setRange(FortuneTcpSocket::RangeCode code, quint8 firstChannel, quint8 channels)
+{
+    if(isRunning())
+        _tcpSocket->setRange(code, firstChannel, channels);
+}
+
+void FortuneThread::testCapture(quint8 channels)
+{
+    if(isRunning())
+        _tcpSocket->testCapture(channels);
+}
+
+void FortuneThread::continueCapture_1(quint8 channels, quint16 freq, quint16 blockSize, quint8 quitCode)
+{
+    if(isRunning())
+        _tcpSocket->continueCapture_1(channels, freq, blockSize, quitCode);
+}
+
+void FortuneThread::continueCapture_2(quint8 channels, quint16 freq, quint16 blockSize, quint8 blockMultiple, quint8 quitCode)
+{
+    if(isRunning())
+        _tcpSocket->continueCapture_2(channels, freq, blockSize, blockMultiple, quitCode);
+}
+
+void FortuneThread::stop()
+{
+    if(isRunning())
+        _tcpSocket->stop();
+}
+
+void FortuneThread::setClockFlag(int flag)
+{
+
+}
+
 //! [0]
 
 //! [1]
