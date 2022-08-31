@@ -73,7 +73,7 @@ FortuneServer::FortuneServer(QObject *parent)
 
 FortuneServer::~FortuneServer()
 {
-    closeServer();
+//    closeServer();
     qDebug()<<"Server Destroy";
 }
 
@@ -96,7 +96,8 @@ void FortuneServer::closeServer()
     while (it.hasNext()) {
         it.next();
         if(it.value() != nullptr)
-            it.value()->on_socketDisconnected();
+            it.value()->quit();
+            //it.value()->on_socketDisconnected();
     }
     _descriptorMap.clear();
 }
@@ -152,10 +153,10 @@ void FortuneServer::setClockFlag(qintptr descriptor, int flag)
 //! [1]
 void FortuneServer::incomingConnection(qintptr socketDescriptor)
 {
-    qDebug()<<socketDescriptor;
+    qDebug()<<"Main Thread Id:"<<QThread::currentThreadId()<<socketDescriptor;
 
     //不使用this作为parent object：关闭服务前需要先关闭客户端的socket连接
-    FortuneThread *thread = new FortuneThread(socketDescriptor, nullptr);
+    FortuneThread *thread = new FortuneThread(socketDescriptor, this);
     _descriptorMap.insert(socketDescriptor, thread);
 
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));

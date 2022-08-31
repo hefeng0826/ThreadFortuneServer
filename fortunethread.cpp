@@ -62,8 +62,10 @@ FortuneThread::FortuneThread(int socketDescriptor, QObject *parent)
 
 FortuneThread::~FortuneThread()
 {
-    on_socketDisconnected();
+ //   on_socketDisconnected();
 //    closeClient();
+    quit();
+    wait();
     qDebug()<<"Thread Destroyed";
 }
 
@@ -140,11 +142,19 @@ void FortuneThread::run()
 
 //    connect(_tcpSocket, &FortuneTcpSocket::stateChanged,
 //            [=](QAbstractSocket::SocketState state){qDebug()<<state;});
-    connect(_tcpSocket, &QTcpSocket::readyRead,
-            this, &FortuneThread::readyRead);
 
+
+
+    connect(_tcpSocket, &QTcpSocket::readyRead,
+                  this, &FortuneThread::readyRead, Qt::DirectConnection);
+    //不同线程的对象间的消息响应：Qt::AutoConnect = QT::QueueConnect
+    /*
+     * 这里使用Qt::DirectConnect 槽函数在当前线程中响应，
+     * 避免了QThread::~QThread()中wait()阻塞主线程消息循环，使槽函数不得响应
+     * QTcpSocket::readyRead  同理
+    */
     connect(_tcpSocket, &QTcpSocket::disconnected,
-            this, &FortuneThread::on_socketDisconnected);
+            this, &FortuneThread::on_socketDisconnected, Qt::DirectConnection);
     connect(this, &FortuneThread::finished,
             _tcpSocket, &FortuneTcpSocket::deleteLater);
 //    connect(_tcpSocket, &FortuneTcpSocket::disconnected,
@@ -158,7 +168,7 @@ void FortuneThread::run()
 
 void FortuneThread::readyRead()
 {
-    qDebug()<<_tcpSocket->readAll();
+    qDebug()<<currentThreadId()<<_tcpSocket->readAll();
     return;
     _ds.startTransaction();
     qint16 buffer[64][8] = {0};
@@ -192,13 +202,12 @@ void FortuneThread::readyRead()
 
 void FortuneThread::on_socketDisconnected()
 {
-    if(!isRunning()) return;
-    _tcpSocket->quit();   //采集卡关闭指令
+//    if(!isRunning()) return;
+//    _tcpSocket->quit();   //采集卡关闭指令
 //    _tcpSocket->deleteLater();
-    qDebug()<<_socketDescriptor<<"Disconnected";
-    exit(0);
-    wait();
+    qDebug()<<_socketDescriptor<<"Disconnected"<<currentThreadId();
     emit clientStateChanged(_peerAddr, _peerPort, false, _socketDescriptor);
+    exit(0);
 }
 //! [4]
 
@@ -220,7 +229,7 @@ void FortuneTcpSocket::quit()
     qDebug()<<"Main Thread:"<<QThread::currentThreadId();
     _outputBuffer.insert(0, char(SAY_BYE));
     emit command();
-    QThread::sleep(1);
+//    QThread::sleep(1);
 }
 
 void FortuneTcpSocket::setRange(RangeCode code, quint8 firstChannel, quint8 channels)
